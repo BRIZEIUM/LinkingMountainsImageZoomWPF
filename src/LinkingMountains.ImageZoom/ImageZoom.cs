@@ -45,6 +45,7 @@ namespace LinkingMountains.ImageZoom
         private bool _isDragging;
         private double _translateXCurrent = TranslateXDefault;
         private double _translateYCurrent = TranslateYDefault;
+        private bool _suppressTranslateChanged;
         private bool _useAnimationOnSetZoomRatio = true;
         private bool _suppressZoomRatioChanged;
 
@@ -276,6 +277,72 @@ namespace LinkingMountains.ImageZoom
         public static readonly DependencyProperty MoveCursorProperty = DependencyProperty.Register(nameof(MoveCursor), typeof(Cursor), typeof(ImageZoom), new FrameworkPropertyMetadata(Cursors.ScrollAll));
         #endregion
 
+        #region TranslateX
+        /// <summary>
+        /// Gets or sets the current horizontal translation (X) of the image.
+        /// </summary>
+        public double TranslateX
+        {
+            get { return (double)GetValue(TranslateXProperty); }
+            set { SetValue(TranslateXProperty, value); }
+        }
+        /// <summary>
+        /// See <see cref="ImageZoom.TranslateX"/> property.
+        /// </summary>
+        public static readonly DependencyProperty TranslateXProperty = DependencyProperty.Register(nameof(TranslateX), typeof(double), typeof(ImageZoom), new FrameworkPropertyMetadata(TranslateXDefault, OnTranslateXChanged, OnCoerceTranslateX));
+        private static void OnTranslateXChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            ImageZoom z = (ImageZoom)d;
+            if (z._suppressTranslateChanged)
+                return;
+
+            double newX = (double)e.NewValue;
+            z.AnimateTransform(z.ZoomRatio, z.ZoomRatio, newX, z._translateYCurrent, z._useAnimationOnSetZoomRatio, false);
+        }
+        private static object OnCoerceTranslateX(DependencyObject d, object baseValue)
+        {
+            ImageZoom z = (ImageZoom)d;
+            double old = z._translateXCurrent;
+            double newVal = (double)baseValue;
+            if (double.IsNaN(newVal) || double.IsInfinity(newVal))
+                return old;
+            return newVal;
+        }
+        #endregion
+
+        #region TranslateY
+        /// <summary>
+        /// Gets or sets the current vertical translation (Y) of the image.
+        /// </summary>
+        public double TranslateY
+        {
+            get { return (double)GetValue(TranslateYProperty); }
+            set { SetValue(TranslateYProperty, value); }
+        }
+        /// <summary>
+        /// See <see cref="ImageZoom.TranslateY"/> property.
+        /// </summary>
+        public static readonly DependencyProperty TranslateYProperty = DependencyProperty.Register(nameof(TranslateY), typeof(double), typeof(ImageZoom), new FrameworkPropertyMetadata(TranslateYDefault, OnTranslateYChanged, OnCoerceTranslateY));
+        private static void OnTranslateYChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            ImageZoom z = (ImageZoom)d;
+            if (z._suppressTranslateChanged)
+                return;
+
+            double newY = (double)e.NewValue;
+            z.AnimateTransform(z.ZoomRatio, z.ZoomRatio, z._translateXCurrent, newY, z._useAnimationOnSetZoomRatio, false);
+        }
+        private static object OnCoerceTranslateY(DependencyObject d, object baseValue)
+        {
+            ImageZoom z = (ImageZoom)d;
+            double old = z._translateYCurrent;
+            double newVal = (double)baseValue;
+            if (double.IsNaN(newVal) || double.IsInfinity(newVal))
+                return old;
+            return newVal;
+        }
+        #endregion
+
 
         public override void OnApplyTemplate()
         {
@@ -483,6 +550,18 @@ namespace LinkingMountains.ImageZoom
                 };
                 _scaleTextBorder.BeginAnimation(UIElement.OpacityProperty, fadeOutAnimation, HandoffBehavior.SnapshotAndReplace);
             }
+
+            // Keep dependency properties in sync with the current translate values without triggering callbacks
+            try
+            {
+                _suppressTranslateChanged = true;
+                SetCurrentValue(TranslateXProperty, _translateXCurrent);
+                SetCurrentValue(TranslateYProperty, _translateYCurrent);
+            }
+            finally
+            {
+                _suppressTranslateChanged = false;
+            }
         }
 
         private void AnimateProperty(Transform transform, DependencyProperty property, double targetValue, bool useAnimation)
@@ -506,15 +585,15 @@ namespace LinkingMountains.ImageZoom
             this.SetCurrentValue(ImageZoom.ZoomRatioProperty, ratio);
         }
 
-        private void MoveToInternal(double offsetX, double offsetY, bool useAnimation = true)
+        private void MoveToInternal(double translateX, double translateY, bool useAnimation = true)
         {
             double ratio = ZoomRatio;
-            if (double.IsNaN(offsetX) || double.IsInfinity(offsetX))
-                offsetX = _translateXCurrent;
-            else if (double.IsNaN(offsetY) || double.IsInfinity(offsetY))
-                offsetY = _translateYCurrent;
+            if (double.IsNaN(translateX) || double.IsInfinity(translateX))
+                translateX = _translateXCurrent;
+            if (double.IsNaN(translateY) || double.IsInfinity(translateY))
+                translateY = _translateYCurrent;
 
-            AnimateTransform(ratio, ratio, offsetX, offsetY, useAnimation, false);
+            AnimateTransform(ratio, ratio, translateX, translateY, useAnimation, false);
         }
 
         private void MoveInternal(double deltaX, double deltaY, bool useAnimation = true)
@@ -555,11 +634,11 @@ namespace LinkingMountains.ImageZoom
         /// <summary>
         /// Moves the image to the specified position.
         /// </summary>
-        /// <param name="offsetX"></param>
-        /// <param name="offsetY"></param>
-        public void MoveTo(double offsetX, double offsetY)
+        /// <param name="translateX">The target horizontal translation.</param>
+        /// <param name="translateY">The target vertical translation.</param>
+        public void MoveTo(double translateX, double translateY)
         {
-            MoveToInternal(offsetX, offsetY);
+            MoveToInternal(translateX, translateY);
         }
 
         /// <summary>

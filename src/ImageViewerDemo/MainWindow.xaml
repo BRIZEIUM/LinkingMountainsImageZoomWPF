@@ -61,34 +61,42 @@
                     <RowDefinition Height="30" />
                     <RowDefinition Height="30" />
                     <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
                 </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Grid.Column="0">
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="TranslateX: "/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ElementName=imageViewer,Path=TranslateX,Mode=TwoWay,UpdateSourceTrigger=LostFocus}"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="TranslateY: "/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ElementName=imageViewer,Path=TranslateY,Mode=TwoWay,UpdateSourceTrigger=LostFocus}"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0">
                     <Run Text="ZoomRatio: "/>
                     <Run Text="{Binding ElementName=imageViewer,Path=ZoomRatio,Mode=OneWay,StringFormat=P2}"/>
                 </TextBlock>
-                <Slider Grid.Row="0" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=ZoomRatio,Mode=TwoWay}"
+                <Slider Grid.Row="2" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=ZoomRatio,Mode=TwoWay}"
                         Minimum="{Binding ElementName=imageViewer,Path=MinZoomRatio,Mode=OneWay}" Maximum="{Binding ElementName=imageViewer,Path=MaxZoomRatio,Mode=OneWay}"/>
                 
-                <TextBlock Grid.Row="1" Grid.Column="0">
+                <TextBlock Grid.Row="3" Grid.Column="0">
                     <Run Text="ZoomFactor: "/>
                     <Run Text="{Binding ElementName=imageViewer,Path=ZoomFactor,Mode=OneWay,StringFormat=F1}"/>
                 </TextBlock>
-                <Slider Grid.Row="1" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=ZoomFactor,Mode=TwoWay}"
+                <Slider Grid.Row="3" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=ZoomFactor,Mode=TwoWay}"
                         Minimum="1" Maximum="5"/>
                 
-                <TextBlock Grid.Row="2" Grid.Column="0">
+                <TextBlock Grid.Row="4" Grid.Column="0">
                     <Run Text="MinZoomRatio: "/>
                     <Run Text="{Binding ElementName=imageViewer,Path=MinZoomRatio,Mode=OneWay,StringFormat=P2}"/>
                 </TextBlock>
-                <Slider Grid.Row="2" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=MinZoomRatio,Mode=TwoWay}"
+                <Slider Grid.Row="4" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=MinZoomRatio,Mode=TwoWay}"
                         Minimum="0" Maximum="100"/>
                 
-                <TextBlock Grid.Row="3" Grid.Column="0">
+                <TextBlock Grid.Row="5" Grid.Column="0">
                     <Run Text="MaxZoomRatio: "/>
                     <Run Text="{Binding ElementName=imageViewer,Path=MaxZoomRatio,Mode=OneWay,StringFormat=P2}"/>
                 </TextBlock>
-                <Slider Grid.Row="3" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=MaxZoomRatio,Mode=TwoWay}"
+                <Slider Grid.Row="5" Grid.Column="1" Value="{Binding ElementName=imageViewer,Path=MaxZoomRatio,Mode=TwoWay}"
                         Minimum="0" Maximum="100"/>
             </Grid>
         </StackPanel>

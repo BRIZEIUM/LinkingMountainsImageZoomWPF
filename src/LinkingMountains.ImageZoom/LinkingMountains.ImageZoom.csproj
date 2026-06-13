@@ -9,7 +9,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>LinkingMountains.ImageZoom</PackageId>
     <Title>LinkingMountains.ImageZoom</Title>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>LinkingMountains</Authors>
     <Company>LinkingMountains</Company>
     <Product>LinkingMountains.ImageZoom</Product>

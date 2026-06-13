@@ -49,6 +49,13 @@ namespace LinkingMountains.ImageZoom
         private bool _useAnimationOnSetZoomRatio = true;
         private bool _suppressZoomRatioChanged;
 
+        // Cached resources to reduce allocations and improve animation performance
+        private readonly IEasingFunction _easingFunction = new CubicEase { EasingMode = EasingMode.EaseOut };
+        private readonly IEasingFunction _fadeEasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+        private readonly TimeSpan _animationDuration = TimeSpan.FromMilliseconds(AnimationDurationMs);
+        private readonly TimeSpan _zoomHintDuration = TimeSpan.FromMilliseconds(ZoomValueHintAnimationDurationMs);
+        private BitmapCache _bitmapCache;
+        private DoubleAnimation _fadeOutAnimation;
 
         static ImageZoom()
         {
@@ -365,6 +372,12 @@ namespace LinkingMountains.ImageZoom
             _translateTransform = GetTemplateChild(PartTranslateTransformName) as TranslateTransform;
             _scaleTextBorder = GetTemplateChild(PartScaleTextBorderName) as Border;
 
+            // Initialize cache resources
+            if (_bitmapCache == null)
+                _bitmapCache = new BitmapCache();
+            if (_fadeOutAnimation == null)
+                _fadeOutAnimation = new DoubleAnimation(1, 0, _zoomHintDuration) { EasingFunction = _fadeEasingFunction };
+
             if (_imageContainer != null)
             {
                 _imageContainer.MouseDown += ImageContainer_MouseDown;
@@ -534,21 +547,58 @@ namespace LinkingMountains.ImageZoom
             _translateXCurrent = x;
             _translateYCurrent = y;
 
+            // If we are animating a scale change, lower quality and enable bitmap cache to reduce rendering cost
+            if (hasScaleChanged && _image != null && useAnimation && !DisableAnimation)
+            {
+                RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.LowQuality);
+                // Set cache mode with a reasonable RenderAtScale to improve performance during animation
+                _bitmapCache.RenderAtScale = Math.Max(1.0, Math.Min(scaleX, 4.0));
+                _image.CacheMode = _bitmapCache;
+            }
+
             AnimateProperty(_translateTransform, TranslateTransform.XProperty, x, useAnimation);
             AnimateProperty(_translateTransform, TranslateTransform.YProperty, y, useAnimation);
-            AnimateProperty(_scaleTransform, ScaleTransform.ScaleXProperty, scaleX, useAnimation);
-            AnimateProperty(_scaleTransform, ScaleTransform.ScaleYProperty, scaleY, useAnimation);
+
+            // For scale, if animating we need to restore quality when animation completes
+            if (useAnimation && !DisableAnimation)
+            {
+                if (_scaleTransform != null)
+                {
+                    var scaleAnimX = new DoubleAnimation(scaleX, _animationDuration) { EasingFunction = _easingFunction };
+                    var scaleAnimY = new DoubleAnimation(scaleY, _animationDuration) { EasingFunction = _easingFunction };
+                    EventHandler onComplete = null;
+                    onComplete = (s, e) =>
+                    {
+                        // Restore high quality after animation
+                        try
+                        {
+                            RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.HighQuality);
+                            if (_image != null && _image.CacheMode == _bitmapCache)
+                                _image.CacheMode = null;
+                        }
+                        finally
+                        {
+                            scaleAnimX.Completed -= onComplete;
+                            scaleAnimY.Completed -= onComplete;
+                        }
+                    };
+                    scaleAnimX.Completed += onComplete;
+                    scaleAnimY.Completed += onComplete;
+
+                    _scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimX, HandoffBehavior.SnapshotAndReplace);
+                    _scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimY, HandoffBehavior.SnapshotAndReplace);
+                }
+            }
+            else
+            {
+                AnimateProperty(_scaleTransform, ScaleTransform.ScaleXProperty, scaleX, useAnimation);
+                AnimateProperty(_scaleTransform, ScaleTransform.ScaleYProperty, scaleY, useAnimation);
+            }
 
             if (hasScaleChanged && _scaleTextBorder != null)
             {
-                TimeSpan duration = TimeSpan.FromMilliseconds(ZoomValueHintAnimationDurationMs);
-                const double OpacityFrom = 1;
-                const double OpacityTo = 0;
-                var fadeOutAnimation = new DoubleAnimation(OpacityFrom, OpacityTo, duration)
-                {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-                };
-                _scaleTextBorder.BeginAnimation(UIElement.OpacityProperty, fadeOutAnimation, HandoffBehavior.SnapshotAndReplace);
+                // Reuse fade animation to reduce allocations
+                _scaleTextBorder.BeginAnimation(UIElement.OpacityProperty, _fadeOutAnimation, HandoffBehavior.SnapshotAndReplace);
             }
 
             // Keep dependency properties in sync with the current translate values without triggering callbacks
@@ -569,12 +619,25 @@ namespace LinkingMountains.ImageZoom
             if (transform is null || property is null)
                 return;
 
-            TimeSpan duration = useAnimation && !DisableAnimation ? TimeSpan.FromMilliseconds(AnimationDurationMs) : TimeSpan.Zero;
-            var animation = new DoubleAnimation(targetValue, duration)
+            if (!useAnimation || DisableAnimation)
             {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
+                // Remove any active animation so local value takes precedence, then set value to avoid creating animation clock and allocations
+                transform.BeginAnimation(property, null);
+                if (property == TranslateTransform.XProperty)
+                    ((TranslateTransform)transform).X = targetValue;
+                else if (property == TranslateTransform.YProperty)
+                    ((TranslateTransform)transform).Y = targetValue;
+                else if (property == ScaleTransform.ScaleXProperty)
+                    ((ScaleTransform)transform).ScaleX = targetValue;
+                else if (property == ScaleTransform.ScaleYProperty)
+                    ((ScaleTransform)transform).ScaleY = targetValue;
+                else
+                    transform.SetValue(property, targetValue);
+                return;
+            }
 
+            // Use cached easing and duration to reduce per-call allocations
+            var animation = new DoubleAnimation(targetValue, _animationDuration) { EasingFunction = _easingFunction };
             transform.BeginAnimation(property, animation, HandoffBehavior.SnapshotAndReplace);
         }
 

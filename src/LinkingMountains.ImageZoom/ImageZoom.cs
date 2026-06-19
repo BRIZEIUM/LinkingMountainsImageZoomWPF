@@ -269,6 +269,21 @@ namespace LinkingMountains.ImageZoom
         public static readonly DependencyProperty DisableDoubleClickResetProperty = DependencyProperty.Register(nameof(DisableDoubleClickReset), typeof(bool), typeof(ImageZoom), new FrameworkPropertyMetadata(false));
         #endregion
 
+        #region RequireCtrlForWheelZoom
+        /// <summary>
+        /// Gets or sets a value indicating whether the Control key must be pressed for mouse wheel zoom to take effect.
+        /// </summary>
+        public bool RequireCtrlForWheelZoom
+        {
+            get { return (bool)GetValue(RequireCtrlForWheelZoomProperty); }
+            set { SetValue(RequireCtrlForWheelZoomProperty, value); }
+        }
+        /// <summary>
+        /// See <see cref="ImageZoom.RequireCtrlForWheelZoom"/> property.
+        /// </summary>
+        public static readonly DependencyProperty RequireCtrlForWheelZoomProperty = DependencyProperty.Register(nameof(RequireCtrlForWheelZoom), typeof(bool), typeof(ImageZoom), new FrameworkPropertyMetadata(false));
+        #endregion
+
         #region MoveCursor
         /// <summary>
         /// Gets or sets the cursor to use when the user is moving the image.
@@ -448,6 +463,10 @@ namespace LinkingMountains.ImageZoom
 
         private void ImageContainer_MouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // If configured, require the Control key to be pressed to perform wheel-zoom.
+            if (RequireCtrlForWheelZoom && (Keyboard.Modifiers & ModifierKeys.Control) == 0)
+                return;
+
             bool isZoomIn = e.Delta > 0;
             bool needZoom = true;
 

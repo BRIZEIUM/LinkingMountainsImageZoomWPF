@@ -47,8 +47,12 @@
                 <Button Name="zoomInBtn" Content="Zoom In" Click="zoomInBtn_Click" />
                 <Button Name="zoomOutBtn" Content="Zoom Out" Click="zoomOutBtn_Click" />
                 <Button Name="resetBtn" Content="Reset" Click="resetBtn_Click" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Height="30">
                 <CheckBox Content="Hide Zoom Hint" IsChecked="{Binding ElementName=imageViewer,Path=AlwaysHideZoomValueHint,Mode=TwoWay}"/>
                 <CheckBox Content="Disable Animation" IsChecked="{Binding ElementName=imageViewer,Path=DisableAnimation,Mode=TwoWay}"/>
+                <CheckBox Content="Require Ctrl for Wheel Zoom" IsChecked="{Binding ElementName=imageViewer,Path=RequireCtrlForWheelZoom,Mode=TwoWay}"/>
             </StackPanel>
             
             <Grid Margin="0 10 0 0">
